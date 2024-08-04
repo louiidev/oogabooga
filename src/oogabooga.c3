@@ -149,7 +149,7 @@ union Vector3 {
 	struct  {float  _x; Vector2 yz;}
 }
 
- union Vector4 @align(16) {
+ union Vector4 {
 	float[4] data;
 	struct {float  x, y, z, w;}
 	struct {Vector2  xy; Vector2 zw;}
@@ -158,6 +158,10 @@ union Vector3 {
 	struct {float  left, bottom, right, top;}
 	struct {Vector3  xyz;}
 	struct {float  _x; Vector3 yzw;}
+}
+
+struct Matrix4 @align(16) {
+    union {float[4][4] m; float[16] data; }
 }
 
 struct StbBuff
@@ -276,10 +280,6 @@ struct DrawQuad {
 	Vector4 scissor;
 	
 	Vector4[1] userdata; // #Volatile do NOT change this to a pointer	
-}
-
-struct Matrix4 {
-    union {float[4][4] m; float[16] data; }
 }
 
 struct DrawFrame {

@@ -100,34 +100,34 @@ inline Vector4 v4_divf(Vector4 a, float32 s) {
 	return v4_div(a, v4(s, s, s, s));
 }
 
-inline float32 v2_length(Vector2 a) {
+float32 v2_length(Vector2 a) {
 	return sqrt(a.x*a.x + a.y*a.y);
 }
-inline Vector2 v2_normalize(Vector2 a) {
+Vector2 v2_normalize(Vector2 a) {
     float32 length = v2_length(a);
     if (length == 0) {
         return (Vector2){0, 0};
     }
     return v2_divf(a, length);
 }
-inline float32 v2_average(Vector2 a) {
+float32 v2_average(Vector2 a) {
 	return (a.x+a.y)/2.0;
 }
-inline Vector2 v2_abs(Vector2 a) {
+Vector2 v2_abs(Vector2 a) {
 	return v2(fabsf(a.x), fabsf(a.y));
 }
-inline float32 v2_cross(Vector2 a, Vector2 b) {
+float32 v2_cross(Vector2 a, Vector2 b) {
     return (a.x * b.y) - (a.y * b.x);
 }
-inline float v2_dot(Vector2 a, Vector2 b) {
+float v2_dot(Vector2 a, Vector2 b) {
 	return simd_dot_product_float32_64((float*)&a, (float*)&b);
 }
 
-inline float32 v3_length(Vector3 a) {
+float32 v3_length(Vector3 a) {
     return sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
 }
 
-inline Vector3 v3_normalize(Vector3 a) {
+Vector3 v3_normalize(Vector3 a) {
     float32 length = v3_length(a);
     if (length == 0) {
         return (Vector3){0, 0, 0};
@@ -135,11 +135,11 @@ inline Vector3 v3_normalize(Vector3 a) {
     return v3_divf(a, length);
 }
 
-inline float32 v3_average(Vector3 a) {
+float32 v3_average(Vector3 a) {
     return (a.x + a.y + a.z) / 3.0;
 }
 
-inline Vector3 v3_abs(Vector3 a) {
+Vector3 v3_abs(Vector3 a) {
     return v3(fabsf(a.x), fabsf(a.y), fabsf(a.z));
 }
 
