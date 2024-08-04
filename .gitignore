@@ -57,6 +57,6 @@ test_doc.vkn
 google_trace.json
 
 build/*
-zig-out/*
-.zig-cache/*
+
+*google_trace*
 .vscode/*
