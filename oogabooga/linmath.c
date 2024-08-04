@@ -43,41 +43,41 @@ typedef union Vector4 {
 inline Vector4 v4(float32 x, float32 y, float32 z, float32 w) { return (Vector4){x, y, z, w}; }
 #define v4_expand(v) (v).x, (v).y, (v).z, (v).w
 
-inline Vector2 v2_add(Vector2 a, Vector2 b) {
+Vector2 v2_add(Vector2 a, Vector2 b) {
 	return v2(a.x+b.x, a.y+b.y);
 }
-inline Vector2 v2_sub(Vector2 a, Vector2 b) {
+Vector2 v2_sub(Vector2 a, Vector2 b) {
 	return v2(a.x-b.x, a.y-b.y);
 }
-inline Vector2 v2_mul(Vector2 a, Vector2 b) {
+Vector2 v2_mul(Vector2 a, Vector2 b) {
 	return v2(a.x*b.x, a.y*b.y);
 }
-inline Vector2 v2_mulf(Vector2 a, float32 s) {
+Vector2 v2_mulf(Vector2 a, float32 s) {
 	return v2_mul(a, v2(s, s));
 }
-inline Vector2 v2_div(Vector2 a, Vector2 b) {
+Vector2 v2_div(Vector2 a, Vector2 b) {
 	return v2(a.x/b.x, a.y/b.y);
 }
-inline Vector2 v2_divf(Vector2 a, float32 s) {
+Vector2 v2_divf(Vector2 a, float32 s) {
 	return v2_div(a, v2(s, s));
 }
 
-inline Vector3 v3_add(Vector3 a, Vector3 b) {
+Vector3 v3_add(Vector3 a, Vector3 b) {
 	return v3(a.x+b.x, a.y+b.y, a.z+b.z);
 }
-inline Vector3 v3_sub(Vector3 a, Vector3 b) {
+Vector3 v3_sub(Vector3 a, Vector3 b) {
 	return v3(a.x-b.x, a.y-b.y, a.z-b.z);
 }
-inline Vector3 v3_mul(Vector3 a, Vector3 b) {
+Vector3 v3_mul(Vector3 a, Vector3 b) {
 	return v3(a.x*b.x, a.y*b.y, a.z*b.z);
 }
-inline Vector3 v3_div(Vector3 a, Vector3 b) {
+Vector3 v3_div(Vector3 a, Vector3 b) {
 	return v3(a.x/b.x, a.y/b.y, a.z/b.z);
 }
-inline Vector3 v3_mulf(Vector3 a, float32 s) {
+Vector3 v3_mulf(Vector3 a, float32 s) {
 	return v3_mul(a, v3(s, s, s));
 }
-inline Vector3 v3_divf(Vector3 a, float32 s) {
+Vector3 v3_divf(Vector3 a, float32 s) {
 	return v3_div(a, v3(s, s, s));
 }
 
@@ -350,7 +350,7 @@ Matrix4 m4_make_rotation(Vector3 axis, float32 radians) {
     return m;
 }
 
-inline Matrix4 m4_make_rotation_z(float32 radians) {
+Matrix4 m4_make_rotation_z(float32 radians) {
 	return m4_make_rotation(v3(0, 0, 1), radians);
 }
 
@@ -378,21 +378,21 @@ Matrix4 m4_mul(Matrix4 a, Matrix4 b) {
     return result;
 }
 
-inline Matrix4 m4_translate(Matrix4 m, Vector3 translation) {
+Matrix4 m4_translate(Matrix4 m, Vector3 translation) {
     Matrix4 translation_matrix = m4_make_translation(translation);
     return m4_mul(m, translation_matrix);
 }
 
-inline Matrix4 m4_rotate(Matrix4 m, Vector3 axis, float32 radians) {
+Matrix4 m4_rotate(Matrix4 m, Vector3 axis, float32 radians) {
     Matrix4 rotation_matrix = m4_make_rotation(axis, radians);
     return m4_mul(m, rotation_matrix);
 }
-inline Matrix4 m4_rotate_z(Matrix4 m, float32 radians) {
+Matrix4 m4_rotate_z(Matrix4 m, float32 radians) {
     Matrix4 rotation_matrix = m4_make_rotation(v3(0, 0, 1), radians);
     return m4_mul(m, rotation_matrix);
 }
 
-inline Matrix4 m4_scale(Matrix4 m, Vector3 scale) {
+Matrix4 m4_scale(Matrix4 m, Vector3 scale) {
     Matrix4 scale_matrix = m4_make_scale(scale);
     return m4_mul(m, scale_matrix);
 }
