@@ -19,17 +19,18 @@ float4 pixel_shader_extension(PS_INPUT input, float4 color) {
     float detail_type = input.userdata[0].x;
     
 	if (detail_type == ENEMY_FLASH) {
-		float flash_amount = input.userdata[0].y;
-	
-        float2 pos = input.self_uv - float2(0.5, 0.5);
-	
-		float2 corner_distance = abs(pos) - (float2(0.5, 0.5) - corner_radius);
+		float flash_amount = input.userdata[0].y; // 0f-1f
 		
-		float dist = length(max(corner_distance, 0.0)) - corner_radius;
-		float smoothing = 0.01;
-		float mask = 1.0-smoothstep(0.0, smoothing, dist);
+		// if there's an issue with the single alpha check, we should check the whole colour
+		// float4 skipColor = float4(0, 0, 0, );
+		// !all(color == skipColor)
+		if (color.a > 0 && color.a != 90.0 / 255.0) {
+			float4 whiteColor = float4(1, 1, 1, 1);
+    		float4 blendedColor = lerp(color, whiteColor, flash_amount);
+			return blendedColor;
+		}
 	
-		color *= mask;
+        
     }
     
 	

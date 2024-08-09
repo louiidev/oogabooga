@@ -1306,10 +1306,14 @@ win32_mouse_pointer_kind_to_win32(Mouse_Pointer_Kind k) {
     panic("Unhandled Mouse_Pointer_Kind");
 }
 
+
+void ogb_instance os_show_mouse_pointer(bool show) {
+    ShowCursor(show);
+}
+
 void ogb_instance
 os_set_mouse_pointer_standard(Mouse_Pointer_Kind kind) {
     thread_local local_persist HCURSOR loaded_pointers[MOUSE_POINTER_MAX] = {0};
-    
     if (loaded_pointers[kind] == 0) {
         loaded_pointers[kind] = LoadCursor(0, win32_mouse_pointer_kind_to_win32(kind));
     }
@@ -1367,16 +1371,19 @@ os_make_custom_mouse_pointer(void *image, int width, int height, int hotspot_x, 
     if (!icon) {
         assert(false, "Failed to create icon from bitmap");
         DeleteObject(bitmap);
+        
         return NULL;
     }
 
     DeleteObject(bitmap);
     
+    log("HELLO??");
     return icon;
 }
 
 Custom_Mouse_Pointer ogb_instance
 os_make_custom_mouse_pointer_from_file(string path, int hotspot_x, int hotspot_y, Allocator allocator) {
+    
     int width, height, channels;
     stbi_set_flip_vertically_on_load(1);
     third_party_allocator = allocator;
@@ -1397,8 +1404,10 @@ os_make_custom_mouse_pointer_from_file(string path, int hotspot_x, int hotspot_y
     
     if (!stb_data) {
         dealloc_string(allocator, png);
+        log("ZEROOO??");
         return 0;
     }
+
     
     Custom_Mouse_Pointer p = os_make_custom_mouse_pointer(stb_data, width, height, hotspot_x, hotspot_y);
     

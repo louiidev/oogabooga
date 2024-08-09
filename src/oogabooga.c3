@@ -5,7 +5,7 @@ import std::os::win32;
 def Win32_HANDLE = Win32_PVOID;
 def Win32_HWND = Win32_HANDLE;
 
-const float SPRITE_PIXEL_SIZE = 16;
+const float SPRITE_PIXEL_SIZE @builtin = 16;
 const Vector4 COLOR_WHITE = {{ 1, 1, 1, 1 }};
 // const Matrix4 IDENTITY = 
 
@@ -14,6 +14,26 @@ const Vector4 COLOR_WHITE = {{ 1, 1, 1, 1 }};
 struct CString {
 	ulong count;
 	char *data;
+}
+
+
+macro @str(s) @builtin {
+	engine::CString str;
+	str.count = engine::length_of_null_terminated_string(s);
+	str.data = s;
+    return str;
+}
+
+macro @v2(x, y) @builtin {
+    return Vector2 {{ x, y }};
+}
+
+macro @v3(x, y, z) @builtin {
+    return engine::Vector3 {{ x, y, z }};
+}
+
+macro @v4(x, y, z, w) @builtin {
+    return engine::Vector4 {{ x, y, z, w }};
 }
 
 
@@ -104,7 +124,7 @@ enum InputKeyCode : (int value) {
 }
 
 
-union Vector2 {
+ union  Vector2  {
 	float[2] data;
 	struct {float  x, y;}
 }
@@ -361,6 +381,11 @@ extern fn void os_update();
 extern fn void gfx_update();
 extern fn bool os_read_entire_file_s(CString path, CString *result, Allocator allocator);
 extern fn bool shader_recompile_with_extension(CString, ulong);
+
+
+def Custom_Mouse_Pointer = void*;
+extern fn Custom_Mouse_Pointer os_make_custom_mouse_pointer(void* image, int hotspot_x, int hotspot_y, Allocator allocator);
+extern fn void os_show_mouse_pointer(bool);
 
 extern fn void dealloc_string(Allocator allocator, CString s);
 

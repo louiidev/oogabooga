@@ -471,6 +471,9 @@ os_set_mouse_pointer_standard(Mouse_Pointer_Kind kind);
 void ogb_instance
 os_set_mouse_pointer_custom(Custom_Mouse_Pointer p);
 
+void ogb_instance
+os_show_mouse_pointer(bool show);
+
 // Expects 32-bit rgba
 // Returns 0 on fail
 Custom_Mouse_Pointer ogb_instance

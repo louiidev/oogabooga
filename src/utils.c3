@@ -38,11 +38,13 @@ fn Vector2 get_image_size(GfxImage *image)
     return Vector2 {{image.width, image.height}};
 }
 
-fn Vector4 get_uv_coords(Vector2 image_size, Vector2 cell_index, float cell_size, Vector2 cell_count)
+fn Vector4 get_uv_coords(Vector2 image_size, Vector2 cell_index)
 {
     // Calculate the width and height of each cell in UV space
-    float cell_width = cell_size / image_size.x;
-    float cell_height = cell_size / image_size.y;
+    float cell_width = SPRITE_PIXEL_SIZE / image_size.x;
+    float cell_height = SPRITE_PIXEL_SIZE / image_size.y;
+
+    Vector2 cell_count = {{ image_size.x / SPRITE_PIXEL_SIZE, image_size.y / SPRITE_PIXEL_SIZE }};
 
     float u = (float)engine::fmod(cell_index.x, cell_count.x) * cell_width;
     float v = 1.0f - ((float)engine::fmod(cell_index.y, cell_count.y) + 1) * cell_height;
@@ -98,7 +100,6 @@ fn float deg_to_rad(float deg)
     return deg * (math::PI / 180.0f);
 }
 
-def SPRITE_PIXEL_SIZE = engine::SPRITE_PIXEL_SIZE;
 fn engine::Matrix4 flip_sprite_x(engine::Matrix4 xform) {
     xform = engine::m4_translate(xform, {{SPRITE_PIXEL_SIZE / 2, SPRITE_PIXEL_SIZE / 2, 0}});
     xform = engine::m4_scale(xform, {{ -1, 1, 1 }});
@@ -166,14 +167,3 @@ fn bool line_circle_collision(Vector2 p1, Vector2 p2, Vector2 circle_center, flo
 }
 
 
-import std::io;
-fn bool circles_overlap(Vector2 center1, float radius1, Vector2 center2, float radius2) {
-    // Calculate the distance between the centers of the two circles
-    float distance = center1.distance(center2);
-    // Check if the distance is less than or equal to the sum of the radii
-    if (distance <= (radius1 + radius2)) {
-        return true;
-    }
-
-    return false;
-}
