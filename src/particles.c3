@@ -12,7 +12,7 @@ def Vector2 = engine::Vector2;
 
 // We use these for projectiles
 // basically they can have physical interactions if we store them in the projectiles array list
-struct Particle {
+struct SpriteParticle {
     bool active;
     Vector2 position;
     Vector2 velocity;
@@ -20,7 +20,7 @@ struct Particle {
 	int sprite_cell_start_y;
     int animation_frame_count;
     int current_frame;
-    float current_animation_time;
+    float current_animation_timer;
     float time_per_frame;
     float rotation;
 
@@ -32,16 +32,27 @@ struct Particle {
 }
 
 
+// struct Particle {
+//     float current_lifetime;
+//     float lifetime;
+//     float rotation;
+//     float scale;
+//     float target_scale;
+//     Vector2 position;
+//     Vector2 velocity;
+//     Vector4 color;
+// }
+
 
 const float DEFAULT_DISTANCE_LIMIT = 300;
 
-fn void Particle.new_projectile(Particle *p, bool player_projectile) {
+fn void SpriteParticle.new_projectile(SpriteParticle *p, bool player_projectile) {
     p.active = true;
     p.distance_limit = DEFAULT_DISTANCE_LIMIT;
     p.player_projectile = player_projectile;
 }
 
-fn void Particle.new(Particle *p) {
+fn void SpriteParticle.new(SpriteParticle *p) {
     p.active = true;
 }   
 
@@ -52,10 +63,10 @@ fn void update_and_draw_projectiles(engine::GfxImage *sprite, game::Game *game, 
             continue;
         }
 
-        proj.current_animation_time+= (float)delta_t;
+        proj.current_animation_timer+= (float)delta_t;
 
-        if (proj.current_animation_time >= proj.time_per_frame) {
-            proj.current_animation_time = 0.0f;
+        if (proj.current_animation_timer >= proj.time_per_frame) {
+            proj.current_animation_timer = 0.0f;
             if (proj.current_frame < proj.animation_frame_count - 1) {
                 proj.current_frame+= 1;
             }
@@ -72,13 +83,13 @@ fn void update_and_draw_projectiles(engine::GfxImage *sprite, game::Game *game, 
         proj.position = proj.position.add(frame_positon_velocity);
     
 
-        Vector2 bottom_left = game.player_entity.position.add(game.player_entity.hitbox_offset);
+        Vector2 center_pos = game.player.position.add(@v2(SPRITE_PIXEL_SIZE * 0.5f, SPRITE_PIXEL_SIZE * 0.5f));
 
-		// engine::draw_circle_xform(xform, {{ 16, 16 }}, {{ 1, 0, 1, 1 }});
+
         if (!proj.player_projectile) {
-            if (utils::rect_circle_collision(bottom_left, game.player_entity.hitbox_size, proj.position, 4)) {
+            if (!game.player.is_invinsible() && collisions::circles_overlap(center_pos, game.player.collision_radius, proj.position, 4)) {
                 proj.active = false;
-                Particle particle;
+                SpriteParticle particle;
                 particle.new();
                 particle.position = proj.position;
                 particle.sprite_cell_start_y = 0;
@@ -86,8 +97,8 @@ fn void update_and_draw_projectiles(engine::GfxImage *sprite, game::Game *game, 
                 particle.time_per_frame = 0.025f;
                 particle.rotation = proj.rotation;
                 game.particles.push(particle);
-                game.player_entity.knockback(proj.velocity.normalize());
-                game.player_entity.health-= proj.damage * 2;
+                game.player.damage_player(proj.velocity.normalize(), proj.damage);
+                
             }
         } else {
             foreach (&enemy : game.room_enemies)
@@ -99,9 +110,9 @@ fn void update_and_draw_projectiles(engine::GfxImage *sprite, game::Game *game, 
                 if (collisions::circles_overlap(proj.position, 6, center_position, 6)) {
                     enemy.knockback(proj.velocity.normalize());
                     proj.active = false;
-                    enemy.health-= game.player_entity.strength * 2;
+                    enemy.health-= game.player.strength;
                     
-                    Particle particle;
+                    SpriteParticle particle;
                     particle.new();
                     particle.position = proj.position;
                     particle.sprite_cell_start_y = 1;
@@ -121,17 +132,17 @@ fn void update_and_draw_projectiles(engine::GfxImage *sprite, game::Game *game, 
 
 }
 
-fn void update_and_draw_particles(engine::GfxImage *sprite, List(<Particle>)* particles, double delta_t) {
+fn void update_and_draw_particles(engine::GfxImage *sprite, List(<SpriteParticle>)* particles, double delta_t) {
     foreach (&particle : particles)
     {   
         if (!particle.active) {
             continue;
         }
 
-        particle.current_animation_time+= (float)delta_t;
+        particle.current_animation_timer+= (float)delta_t;
 
-        if (particle.current_animation_time >= particle.time_per_frame) {
-            particle.current_animation_time = 0.0f;
+        if (particle.current_animation_timer >= particle.time_per_frame) {
+            particle.current_animation_timer = 0.0f;
             if (particle.current_frame >= particle.animation_frame_count - 1) {
                 particle.active = false;
             } else {
@@ -151,7 +162,7 @@ fn void update_and_draw_particles(engine::GfxImage *sprite, List(<Particle>)* pa
 }
 
 
-fn void render_particle(Particle *particle, engine::GfxImage* sprite) {
+fn void render_particle(SpriteParticle *particle, engine::GfxImage* sprite) {
     engine::Matrix4 xform = engine::m4_scalar(1.0);
     xform  = engine::m4_translate(xform, {{ particle.position.x, particle.position.y, 0 }});
     xform  = engine::m4_translate(xform, {{-SPRITE_PIXEL_SIZE * 0.5f , -SPRITE_PIXEL_SIZE  * 0.5f, 0}});

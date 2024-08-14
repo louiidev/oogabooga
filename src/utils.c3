@@ -114,23 +114,6 @@ fn bool point_inside_rect(Vector2 min, Vector2 max, Vector2 p) {
 }
 
 
-// Rect min is the bottom left corner
-fn bool rect_circle_collision(Vector2 rect_min, Vector2 size, Vector2 circle_center, float radius) {
-    float dist_x = $$abs(circle_center.x - (rect_min.x + size.x / 2));
-    float dist_y = $$abs(circle_center.y - (rect_min.y + size.y / 2));
-
-    if (dist_x > (size.x / 2 + radius)) { return false; }
-    if (dist_y > (size.y / 2 + radius)) { return false; }
-
-    if (dist_x <= (size.x / 2)) { return true; }
-    if (dist_y <= (size.y / 2)) { return true; }
-
-    float dx = dist_x - size.x / 2;
-    float dy = dist_y - size.y / 2;
-    return (dx * dx + dy * dy <= (radius * radius));
-}
-
-
 fn bool line_circle_collision(Vector2 p1, Vector2 p2, Vector2 circle_center, float radius) {
     // Vector from p1 to p2
     Vector2 d = {{ p2.x - p1.x, p2.y - p1.y }};

@@ -16,6 +16,9 @@ struct CString {
 	char *data;
 }
 
+macro @m4_identity() @builtin {
+	return m4_make_scale({{ 1f, 1f, 1f }});
+}
 
 macro @str(s) @builtin {
 	engine::CString str;
@@ -124,7 +127,7 @@ enum InputKeyCode : (int value) {
 }
 
 
- union  Vector2  {
+union  Vector2  {
 	float[2] data;
 	struct {float  x, y;}
 }
@@ -182,6 +185,10 @@ union Vector3 {
 
 struct Matrix4 @align(16) {
     union {float[4][4] m; float[16] data; }
+}
+
+fn Matrix4 Matrix4.translate(self, Vector2 position) {
+	return m4_translate(self, @v3(position.x, position.y, 0));
 }
 
 struct StbBuff
@@ -246,7 +253,7 @@ struct HashTable {
 }
 
 struct GfxFontVariation {
-	GfxFont *font;
+	Gfx_Font *font;
 	uint height;
 	GfxFontMetrics metrics;
 	float scale;
@@ -256,7 +263,7 @@ struct GfxFontVariation {
 }
 
 const int MAX_FONT_HEIGHT = 512;
-struct GfxFont {
+struct Gfx_Font {
 	StbttFontinfo stbtt_handle;
 	CString raw_font_data;
 	GfxFontVariation[MAX_FONT_HEIGHT] variations; // Variation per font height
@@ -267,6 +274,17 @@ struct GfxImage {
 	uint width, height, channels;
 	int gfx_handle;
 	Allocator allocator;
+}
+
+struct Gfx_Text_Metrics {
+	Vector2 functional_pos_min;
+	Vector2 functional_pos_max;
+	Vector2 functional_size;
+	
+	// The visual bounds for the text.
+	Vector2 visual_pos_min;
+	Vector2 visual_pos_max;
+	Vector2 visual_size;
 }
 
 
@@ -365,7 +383,8 @@ extern fn void pop_z_layer();
 extern fn void push_window_scissor(Vector2 min, Vector2 max);
 extern fn void pop_window_scissor();
 
-
+extern fn void draw_text_xform(Gfx_Font *font, CString text, uint raster_height, Matrix4 xform, Vector2 scale, Vector4 color);
+extern fn void draw_text(Gfx_Font *font, CString text, uint raster_height, Vector2 position, Vector2 scale, Vector4 color);
 extern fn DrawQuad *draw_image(GfxImage *image, Vector2 position, Vector2 size, Vector4 color);
 extern fn DrawQuad *draw_image_xform(GfxImage *image, Matrix4, Vector2 size, Vector4 color);
 extern fn DrawQuad *draw_rect(Vector2 position, Vector2 size, Vector4 color);
@@ -375,6 +394,9 @@ extern fn DrawQuad *draw_circle(Vector2, Vector2, Vector4);
 extern fn void draw_line(Vector2 p0, Vector2 p1, float line_width, Vector4 color);
 
 extern fn GfxImage *load_image_from_disk(CString path, Allocator allocator);
+extern fn Gfx_Font *load_font_from_disk(CString path, Allocator allocator);
+
+extern fn Gfx_Text_Metrics measure_text(Gfx_Font *font, CString text, uint raster_height, Vector2 scale);
 
 extern fn void oogabooga_init(ulong);
 extern fn void os_update();
@@ -393,12 +415,14 @@ extern fn double os_get_current_time_in_seconds();
 extern fn void os_high_precision_sleep(double);
 extern fn ulong os_get_current_cycle_count();
 
+
+extern fn long get_random_int_in_range(long, long);
 extern fn float get_random_float32_in_range(float, float);
 extern fn float get_random_float32();
 
 // GLOBALS
-extern engine::OsWindow window;
-extern engine::DrawFrame draw_frame;
+extern engine::OsWindow window @builtin;
+extern engine::DrawFrame draw_frame @builtin;
 extern engine::Input_Frame input_frame;
 extern ulong seed_for_random;
 
@@ -406,8 +430,10 @@ extern fn Vector4 hex_to_rgba(long);
 
 extern fn void reset_temporary_storage();
 extern fn Allocator get_heap_allocator();
-extern fn Allocator get_temp_storage();
+extern fn Allocator get_temporary_allocator();
 
+
+extern fn CString sprints(Allocator allocator, CString fmt, ...);
 
 
 extern fn bool is_key_down(int);
@@ -430,6 +456,7 @@ extern fn Vector2 v2_add(Vector2, Vector2);
 extern fn Vector2 v2_sub(Vector2, Vector2);
 extern fn float v2_length(Vector2);
 extern fn Vector2 v2_mulf(Vector2, float);
+extern fn Vector2 v2_mul(Vector2, Vector2);
 
 extern fn double fmod(double, double);
 extern fn double fabs(double);
