@@ -54,7 +54,18 @@ fn void SpriteParticle.new_projectile(SpriteParticle *p, bool player_projectile)
 
 fn void SpriteParticle.new(SpriteParticle *p) {
     p.active = true;
-}   
+}
+
+fn void spawn_projectile_particle(Game* game, SpriteParticle* proj, int sprite_cell_start_y) {
+    SpriteParticle particle;
+    particle.new();
+    particle.position = proj.position;
+    particle.sprite_cell_start_y = sprite_cell_start_y;
+    particle.animation_frame_count = 4;
+    particle.time_per_frame = 0.025f;
+    particle.rotation = proj.rotation;
+    game.particles.push(particle);
+}
 
 fn void update_and_draw_projectiles(engine::GfxImage *sprite, game::Game *game, double delta_t) {
     foreach (&proj : game.projectiles)
@@ -89,16 +100,8 @@ fn void update_and_draw_projectiles(engine::GfxImage *sprite, game::Game *game, 
         if (!proj.player_projectile) {
             if (!game.player.is_invinsible() && collisions::circles_overlap(center_pos, game.player.collision_radius, proj.position, 4)) {
                 proj.active = false;
-                SpriteParticle particle;
-                particle.new();
-                particle.position = proj.position;
-                particle.sprite_cell_start_y = 0;
-                particle.animation_frame_count = 4;
-                particle.time_per_frame = 0.025f;
-                particle.rotation = proj.rotation;
-                game.particles.push(particle);
+                spawn_projectile_particle(game, proj, 0);
                 game.player.damage_player(proj.velocity.normalize(), proj.damage);
-                
             }
         } else {
             foreach (&enemy : game.room_enemies)
@@ -111,16 +114,26 @@ fn void update_and_draw_projectiles(engine::GfxImage *sprite, game::Game *game, 
                     enemy.knockback(proj.velocity.normalize());
                     proj.active = false;
                     enemy.health-= game.player.strength;
-                    
-                    SpriteParticle particle;
-                    particle.new();
-                    particle.position = proj.position;
-                    particle.sprite_cell_start_y = 1;
-                    particle.animation_frame_count = 4;
-                    particle.time_per_frame = 0.025f;
-                    particle.rotation = proj.rotation;
-                    game.particles.push(particle);
+                    spawn_projectile_particle(game, proj, 1);
                     break;
+                }
+            }
+        }
+
+        if (proj.active) {
+            foreach (wall : game.walls)
+            {
+                if (collisions::rect_circle_collision(wall, proj.position, 4)) {
+                    proj.active = false;
+                    spawn_projectile_particle(game, proj, 1);
+                }
+            }
+
+            foreach (door : game.doors)
+            {
+                if (collisions::rect_circle_collision({ (int)door.position.x, (int)door.position.y, 12, 12 }, proj.position, 4)) {
+                    proj.active = false;
+                    spawn_projectile_particle(game, proj, 1);
                 }
             }
         }
@@ -179,6 +192,7 @@ fn void render_particle(SpriteParticle *particle, engine::GfxImage* sprite) {
     );
     quad.uv = utils::get_uv_coords(
             utils::get_image_size(sprite),
-            {{ particle.sprite_cell_start_x + (float)particle.current_frame, particle.sprite_cell_start_y }}
+            {{ particle.sprite_cell_start_x + (float)particle.current_frame, particle.sprite_cell_start_y }},
+            SPRITE_PIXEL_SIZE
     );
 }

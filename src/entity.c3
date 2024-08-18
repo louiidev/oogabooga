@@ -11,9 +11,10 @@ import weapons;
 import collisions;
 
 const float ENEMY_KNOCKBACK_TIME = 0.4f;
+const float ENEMY_KNOCKBACK_VELOCITY = 100f;
+
 const float BAT_ATTACK_TIME = 4f;
 const float SKULL_ATTACK_TIME = 0.5f;
-
 
 enum EntAnimation {
     IDLE,
@@ -50,7 +51,8 @@ struct Entity
     int sprite_cell_count_x;
     int sprite_cell_count_y;
 
-	weapons::Weapons equipped_weapon;
+	int equipped_weapon_index;
+    int offhand_weapon_index;
     Timer current_animation_timer;
     int current_animation_frame;
 
@@ -74,6 +76,7 @@ struct Entity
     Timer attack_timer;
     Timer knockback_timer;
     Vector2 knockback_velocity;
+    Vector2 knockback_direction;
 
     EntType entity_type;
     EntAnimation animation;
@@ -87,6 +90,7 @@ struct Entity
     Timer dodge_roll_timer;
     Timer weapon_cooldown_timer;
     Vector2 dodge_velocity;
+    Vector2 dodge_direction;
 }
 
 def COLOR_WHITE = engine::COLOR_WHITE;
@@ -136,7 +140,7 @@ fn void Entity.knockback(Entity *ent, Vector2 attack_direction) {
     }
 
     ent.knockback_timer = ENEMY_KNOCKBACK_TIME;
-    ent.knockback_velocity = attack_direction.mulf(engine::get_random_float32_in_range(150, 200));
+    ent.knockback_direction = attack_direction;
 
     switch(ent.entity_type) {
         case EntType.PLAYER:
@@ -195,7 +199,7 @@ fn void update_entity(Entity *ent, Game *game, double delta_t, ) {
 
     foreach (&enemy : game.room_enemies)
     {
-        if (!enemy.active || enemy.position.equals(ent.position) || enemy.knockback_timer > 0 || ent.speed > enemy.speed) {
+        if (!enemy.active || enemy.position.equals(ent.position) || enemy.knockback_timer > 0 || ent.speed > enemy.speed || !game.player.active) {
             // lets assume if the position is the same, its the same enemy
             continue;
         }
@@ -225,10 +229,10 @@ fn void update_entity(Entity *ent, Game *game, double delta_t, ) {
         }
     }
 
-     if ((ent.knockback_velocity.x != 0 || ent.knockback_velocity.y != 0) && ent.knockback_timer > 0) {
-        float t = ent.knockback_timer / ENEMY_KNOCKBACK_TIME;
-        ent.knockback_velocity.x = (float)engine::lerpf(ent.knockback_velocity.x, 0, 1.0 - t);
-        ent.knockback_velocity.y = (float)engine::lerpf(ent.knockback_velocity.y, 0, 1.0 - t);
+     if (ent.knockback_timer > 0) {
+        float t = 1.0f - (ent.knockback_timer / ENEMY_KNOCKBACK_TIME);
+        ent.knockback_velocity.x = (float)engine::lerpf((double)ent.knockback_direction.x * ENEMY_KNOCKBACK_VELOCITY, 0, t);
+        ent.knockback_velocity.y = (float)engine::lerpf((double)ent.knockback_direction.y * ENEMY_KNOCKBACK_VELOCITY, 0, t);
         ent.position.x += ent.knockback_velocity.x * (float)delta_t;
         ent.position.y += ent.knockback_velocity.y * (float)delta_t;
         can_move_x = false;
@@ -294,18 +298,32 @@ fn void update_weapon_logic(Game *game, Vector2 player_velocity, double delta_t)
 
     float rotation_z = -utils::calc_rotation_to_target(game::world_frame.world_mouse_pos, player.position);
     float moveDistance = 15.0f;
-    float delta_x = moveDistance * $$cos(rotation_z);
-    float delta_y = moveDistance * $$sin(rotation_z);
+    
 
     Vector2 attack_direction = game::world_frame.world_mouse_pos.sub(player.position).normalize();
+    float delta_x = moveDistance * $$cos(rotation_z);
+    float delta_y = moveDistance * $$sin(rotation_z);
     Vector2 attack_position = player.position.add({{ delta_x, -delta_y }});
     
     float attack_length = 10;
     Vector2 attack_position_centered = attack_position.add({{ 16 * 0.5f, 16 * 0.5f }}).sub(attack_direction.mulf(attack_length));
     
 
+    if (game.player.weapon_cooldown_timer <= 0 && game.player.dodge_roll_timer <= 0 && engine::is_key_down(InputKeyCode.MOUSE_BUTTON_LEFT.value)) {
 
-    if (game.player.weapon_cooldown_timer <= 0 && engine::is_key_down(InputKeyCode.MOUSE_BUTTON_LEFT.value)) {
+
+        Weapon weapon = game.weapons_db[game.player.equipped_weapon_index];
+        float bullet_rotation = rotation_z;
+        if (weapon.accuracy > 0.0f) {
+            float random_angle = engine::get_random_float32_in_range(-weapon.accuracy, weapon.accuracy);
+            // bullet_rotation-= random_angle;
+            float cos_angle  = $$cos(random_angle);
+            float sin_angle  = $$sin(random_angle);
+            float new_x = attack_direction.x * cos_angle - attack_direction.y * sin_angle;
+            float new_y = attack_direction.x * sin_angle + attack_direction.y * cos_angle;
+            attack_direction = attack_direction.add(@v2(new_x, new_y).normalize());
+        }
+
         game.camera.shake(0.5f);
         SpriteParticle projectile;
         projectile.new_projectile(true);
@@ -316,7 +334,7 @@ fn void update_weapon_logic(Game *game, Vector2 player_velocity, double delta_t)
         projectile.current_frame = 0;
         projectile.time_per_frame = 0.015f;
         projectile.animation_frame_count = 2;
-        projectile.rotation = rotation_z;
+        projectile.rotation = bullet_rotation;
         game.projectiles.push(
             projectile
         );
@@ -356,9 +374,8 @@ fn void render_entity(Entity entity) {
 
     // @TODO: Maybe we should just store this as a v2?
     if (entity.animation == EntAnimation.IDLE) {
-        quad.uv = utils::get_uv_coords(sprite_size, @v2(entity.current_animation_frame + entity.idle_animation_frame_start_x, entity.idle_animation_frame_start_y));
+        quad.uv = utils::get_uv_coords(sprite_size, @v2(entity.current_animation_frame + entity.idle_animation_frame_start_x, entity.idle_animation_frame_start_y), SPRITE_PIXEL_SIZE);
     } else {
-        quad.uv = utils::get_uv_coords(sprite_size, @v2(0, 0));
         unreachable();
     }
 
@@ -410,11 +427,11 @@ fn engine::Matrix4 render_player(Entity *entity, engine::GfxImage* player_sprite
 
     switch (entity.animation) {
         case EntAnimation.WALK:
-            quad.uv = utils::get_uv_coords(sprite_size, @v2(entity.current_animation_frame + entity.walk_animation_frame_start, 0));
+            quad.uv = utils::get_uv_coords(sprite_size, @v2(entity.current_animation_frame + entity.walk_animation_frame_start, 0), SPRITE_PIXEL_SIZE);
         case EntAnimation.ROLLING:
-            quad.uv = utils::get_uv_coords(sprite_size, @v2(entity.current_animation_frame + entity.rolling_animation_frame_start_x, entity.rolling_animation_frame_start_y));
+            quad.uv = utils::get_uv_coords(sprite_size, @v2(entity.current_animation_frame + entity.rolling_animation_frame_start_x, entity.rolling_animation_frame_start_y), SPRITE_PIXEL_SIZE);
         default:
-            quad.uv = utils::get_uv_coords(sprite_size, @v2(0, 0));
+            quad.uv = utils::get_uv_coords(sprite_size, @v2(0, 0), SPRITE_PIXEL_SIZE);
     }
 
 	return weapon_xform;
@@ -426,11 +443,13 @@ fn void render_weapons(Entity *player, Matrix4 player_xform, engine::GfxImage* w
 
 
     Vector2 sprite_size = utils::get_image_size(weapons_sprite);
-    if (player.equipped_weapon != Weapons.NIL)
+    if (player.equipped_weapon_index != 0)
     {
         Matrix4 xform = player_xform;
-        xform = m4_translate(xform, @v3(SPRITE_PIXEL_SIZE * 0.5f, 0, 0));
-
+        
+        // Center player xform to center of body
+        xform = m4_translate(xform, @v3(SPRITE_PIXEL_SIZE * 0.5f, SPRITE_PIXEL_SIZE * 0.5f, 0));
+        engine::draw_circle_xform(xform, @v2(1, 1), {{ 1, 0, 0, 1f }});
         float x_scale = 1.0;
         float y_scale = 1.0;
 
@@ -441,23 +460,22 @@ fn void render_weapons(Entity *player, Matrix4 player_xform, engine::GfxImage* w
 
         float angle = player.weapon_angle + player.current_weapon_angle_offset;
 
-        xform = m4_translate(xform, @v3(0, SPRITE_PIXEL_SIZE * 0.5f, 0));
         xform = engine::m4_scale(xform, @v3(x_scale, y_scale, 1));
 
         xform = m4_rotate_z(xform, angle);
-        xform = m4_translate(xform, @v3(0, -SPRITE_PIXEL_SIZE * 0.5f, 0));
-        xform = m4_translate(xform, @v3(-SPRITE_PIXEL_SIZE * 0.15f, 0, 0));
+        xform = m4_translate(xform, @v3(0, -WEAPON_SPRITE_SIZE * 0.5f, 0));
+        xform = m4_translate(xform, @v3(-WEAPON_SPRITE_SIZE * 0.20f, 0, 0));
 
-        Vector2 center_pos = player.position.add(@v2(16 *0.5f, 16 *0.5f));
-        bool mouse_above = game::world_frame.world_mouse_pos.y > center_pos.y;
+        Vector2 center_pos = player.position.add(@v2(SPRITE_PIXEL_SIZE * 0.5f, SPRITE_PIXEL_SIZE * 0.5f));
 
-        if (mouse_above) {
+        if (player.flip_x) {
             engine::push_z_layer(0);
         }
       
-        engine::DrawQuad *quad = engine::draw_image_xform(weapons_sprite, xform, @v2(SPRITE_PIXEL_SIZE, SPRITE_PIXEL_SIZE), engine::COLOR_WHITE);
-        quad.uv = utils::get_uv_coords(sprite_size, @v2((int)player.equipped_weapon, 0));
-        if (mouse_above) {
+        engine::DrawQuad *quad = engine::draw_image_xform(weapons_sprite, xform, @v2(WEAPON_SPRITE_SIZE, WEAPON_SPRITE_SIZE), engine::COLOR_WHITE);
+        engine::draw_circle_xform(xform, @v2(1, 1), {{ 1, 0, 0, 1f }});
+        quad.uv = utils::get_uv_coords(sprite_size, @v2(player.equipped_weapon_index, 0), WEAPON_SPRITE_SIZE);
+        if (player.flip_x) {
             engine::pop_z_layer();
         }
     }

@@ -5,7 +5,9 @@ import std::os::win32;
 def Win32_HANDLE = Win32_PVOID;
 def Win32_HWND = Win32_HANDLE;
 
-const float SPRITE_PIXEL_SIZE @builtin = 16;
+const int SPRITE_PIXEL_SIZE @builtin = 16;
+const float WEAPON_SPRITE_SIZE @builtin = 24;
+
 const Vector4 COLOR_WHITE = {{ 1, 1, 1, 1 }};
 // const Matrix4 IDENTITY = 
 
@@ -189,6 +191,12 @@ struct Matrix4 @align(16) {
 
 fn Matrix4 Matrix4.translate(self, Vector2 position) {
 	return m4_translate(self, @v3(position.x, position.y, 0));
+}
+
+fn Vector2 Matrix4.position(self) {
+	// m.m[0][3] = translation.x;
+    // m.m[1][3] = translation.y;
+	return @v2(self.m[0][3], self.m[1][3]);
 }
 
 struct StbBuff

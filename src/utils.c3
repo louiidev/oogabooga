@@ -38,13 +38,13 @@ fn Vector2 get_image_size(GfxImage *image)
     return Vector2 {{image.width, image.height}};
 }
 
-fn Vector4 get_uv_coords(Vector2 image_size, Vector2 cell_index)
+fn Vector4 get_uv_coords(Vector2 image_size, Vector2 cell_index, float sprite_pixel_size)
 {
     // Calculate the width and height of each cell in UV space
-    float cell_width = SPRITE_PIXEL_SIZE / image_size.x;
-    float cell_height = SPRITE_PIXEL_SIZE / image_size.y;
+    float cell_width = sprite_pixel_size / image_size.x;
+    float cell_height = sprite_pixel_size / image_size.y;
 
-    Vector2 cell_count = {{ image_size.x / SPRITE_PIXEL_SIZE, image_size.y / SPRITE_PIXEL_SIZE }};
+    Vector2 cell_count = {{ image_size.x / sprite_pixel_size, image_size.y / sprite_pixel_size }};
 
     float u = (float)engine::fmod(cell_index.x, cell_count.x) * cell_width;
     float v = 1.0f - ((float)engine::fmod(cell_index.y, cell_count.y) + 1) * cell_height;
