@@ -34,8 +34,6 @@ enum RelicType {
 	MAX_RELIC,
 }
 
-
-
 enum RewardType {
 	NIL,
 	RELIC,
@@ -131,8 +129,8 @@ macro @create_bat() {
     ent.entity_type = EntType.BAT;
 	ent.sprite_cell_count_x = 4;
 	ent.sprite_cell_count_y = 4;
-	ent.max_health = 2;
-	ent.health = 2;
+	ent.max_health = 10;
+	ent.health = 10;
 	ent.position = @v2( 
 		engine::get_random_float32_in_range(-ROOM_SIZE.x * 0.5f, ROOM_SIZE.x * 0.5f),
 		engine::get_random_float32_in_range(100, ROOM_SIZE.y * 0.5f)
@@ -152,9 +150,9 @@ macro @create_skull() {
     ent.idle_animation_play_time = 0.1f;
 	ent.speed = 0.3f;
     ent.entity_type = EntType.SKULL;
-	ent.max_health = 2;
+	ent.max_health = 20;
 	ent.strength = 2;
-	ent.health = 2;
+	ent.health = 20;
 	ent.position = @v2( 
 		engine::get_random_float32_in_range(-ROOM_SIZE.x * 0.5f, ROOM_SIZE.x * 0.5f),
 		engine::get_random_float32_in_range(0, ROOM_SIZE.y * 0.5f)
@@ -324,11 +322,14 @@ fn int main(String[] args)
 	Cbuffer cbuffer;
 
 	
-
+	bool paused = false;
  	while (!engine::window.should_close)
     {
 		double now = engine::os_get_current_time_in_seconds();
         double delta_t = now - last_time;
+
+
+
 		
 
 		if (delta_t < min_frametime)
@@ -337,6 +338,14 @@ fn int main(String[] args)
             now = engine::os_get_current_time_in_seconds();
             delta_t = now - last_time;
         }
+
+		if (is_key_just_released((int)'P')) {
+			paused = !paused;	
+		}
+
+		if (paused) {
+			delta_t = 0.0;
+		}
 
 		last_time = now;
 
@@ -375,6 +384,22 @@ fn int main(String[] args)
 		if (is_key_down(InputKeyCode.KEY_ARROW_LEFT.value) || is_key_down((int)'A'))
 		{
 			player_input.x -= 1;
+		}
+
+		for (ulong i = 0; i < engine::input_frame.number_of_events; i++) {
+			Input_Event e = engine::input_frame.events[i];
+			
+			switch (e.kind) {
+				case INPUT_EVENT_SCROLL:
+					if (e.yscroll != 0.0f) {
+						// Swap weapons
+						int offhand = game.player.offhand_weapon_index;
+						game.player.offhand_weapon_index = game.player.equipped_weapon_index;
+						game.player.equipped_weapon_index = offhand;
+					}
+				default:
+				break;
+			}
 		}
 
 		player_input = engine::v2_normalize(player_input);
@@ -534,8 +559,9 @@ fn int main(String[] args)
 						case WEAPON:
 							if (game.player.offhand_weapon_index != 0) {
 								// drop current weapon
+							} else if (game.player.equipped_weapon_index != 0) {
+								game.player.offhand_weapon_index = game.player.equipped_weapon_index;
 							}
-							game.player.offhand_weapon_index = game.player.equipped_weapon_index;
 							game.player.equipped_weapon_index = game.current_room_reward.data.weapon_db_index;
 							
 						default:
@@ -653,7 +679,7 @@ fn int main(String[] args)
 			engine::draw_image_xform(sprites.health_bar, sprite_xform, sprite_size, engine::COLOR_WHITE);
 			
 			// Draw Text
-			CString text = @str("Health %i/%i");
+			CString text = @str("Health %.1f/%.1f");
 			CString formatted = engine::sprints(engine::get_temporary_allocator(), text, game.player.health, game.player.max_health);
 			int font_height = 24;
 			engine::Gfx_Text_Metrics metrics = engine::measure_text(game.font, formatted, font_height, @v2(1, 1));
@@ -675,8 +701,8 @@ fn void generate_room(Game *game) {
 	game.show_reward = false;
 	game.doors_locked = true;
 	game.player.position = SPAWN_POS;
-
-	long number_of_enemies = engine::get_random_int_in_range(1, 2);
+	game.current_room_reward = get_pickup_from_reward(RewardType.WEAPON);
+	long number_of_enemies = engine::get_random_int_in_range(15, 50);
 	for(int i = 0; i < number_of_enemies; i++) {
 		long enemy_type = engine::get_random_int_in_range(1, (long)EntType.MAX_ENT_TYPE - 1);
 		EntType type = (EntType)enemy_type;

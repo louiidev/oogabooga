@@ -125,7 +125,7 @@ enum InputKeyCode : (int value) {
     MOUSE_FIRST = 156,
     MOUSE_LAST = 158, 
     
-    INPUT_KEY_CODE_COUNT = 161
+    INPUT_KEY_CODE_COUNT = 159
 }
 
 

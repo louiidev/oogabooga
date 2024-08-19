@@ -37,8 +37,8 @@ struct Entity
 {
     bool active;
     bool flip_x;
-    int health;
-    int max_health;
+    float health;
+    float max_health;
     float speed;
     float weapon_angle;
     float current_weapon_angle_offset;
@@ -121,7 +121,7 @@ fn void Entity.update_timers(Entity *ent, float delta_t) {
 
 
 const float PLAYER_I_FRAMES_TIME = 0.5f;
-fn void Entity.damage_player(Entity *ent, Vector2 attack_direction, int damage_amount) {
+fn void Entity.damage_player(Entity *ent, Vector2 attack_direction, float damage_amount) {
     if (ent.is_invinsible()) {
         return;
     }
@@ -300,45 +300,61 @@ fn void update_weapon_logic(Game *game, Vector2 player_velocity, double delta_t)
     float moveDistance = 15.0f;
     
 
-    Vector2 attack_direction = game::world_frame.world_mouse_pos.sub(player.position).normalize();
+    
     float delta_x = moveDistance * $$cos(rotation_z);
     float delta_y = moveDistance * $$sin(rotation_z);
     Vector2 attack_position = player.position.add({{ delta_x, -delta_y }});
     
     float attack_length = 10;
-    Vector2 attack_position_centered = attack_position.add({{ 16 * 0.5f, 16 * 0.5f }}).sub(attack_direction.mulf(attack_length));
     
 
-    if (game.player.weapon_cooldown_timer <= 0 && game.player.dodge_roll_timer <= 0 && engine::is_key_down(InputKeyCode.MOUSE_BUTTON_LEFT.value)) {
+    if (game.player.equipped_weapon_index != 0 && game.player.weapon_cooldown_timer <= 0 && game.player.dodge_roll_timer <= 0 && engine::is_key_down(InputKeyCode.MOUSE_BUTTON_LEFT.value)) {
 
-
+        
         Weapon weapon = game.weapons_db[game.player.equipped_weapon_index];
-        float bullet_rotation = rotation_z;
-        if (weapon.accuracy > 0.0f) {
-            float random_angle = engine::get_random_float32_in_range(-weapon.accuracy, weapon.accuracy);
-            // bullet_rotation-= random_angle;
-            float cos_angle  = $$cos(random_angle);
-            float sin_angle  = $$sin(random_angle);
-            float new_x = attack_direction.x * cos_angle - attack_direction.y * sin_angle;
-            float new_y = attack_direction.x * sin_angle + attack_direction.y * cos_angle;
-            attack_direction = attack_direction.add(@v2(new_x, new_y).normalize());
+        game.camera.shake(0.75f);
+
+        long bullets_per_shot = 1;
+
+        if (weapon.min_bullets_per_shot != 0) {
+            assert(weapon.min_bullets_per_shot < weapon.max_bullets_per_shot);
+            bullets_per_shot = engine::get_random_int_in_range(weapon.min_bullets_per_shot, weapon.max_bullets_per_shot);
+        }
+       
+        for (long i = 0; i < bullets_per_shot; i++) {
+            Vector2 attack_direction = @v2($$cos(-rotation_z), $$sin(-rotation_z));
+            float bullet_rotation = rotation_z;
+            if (weapon.accuracy > 0.0f) {
+                float random_angle = engine::get_random_float32_in_range(-weapon.accuracy, weapon.accuracy);
+                float cos_angle  = $$cos(random_angle);
+                float sin_angle  = $$sin(random_angle);
+                bullet_rotation += random_angle;
+                float new_x = attack_direction.x * cos_angle - attack_direction.y * sin_angle;
+                float new_y = attack_direction.x * sin_angle + attack_direction.y * cos_angle;
+                attack_direction = @v2($$cos(-bullet_rotation), $$sin(-bullet_rotation));
+            }
+
+
+            SpriteParticle projectile;
+            projectile.new_projectile(true);
+            projectile.position = player.position.add({{ delta_x + SPRITE_PIXEL_SIZE * 0.5f, -delta_y + SPRITE_PIXEL_SIZE * 0.5f }});
+            projectile.velocity = attack_direction.mulf(weapon.velocity);
+            projectile.sprite_cell_start_x = 0;
+            projectile.sprite_cell_start_y = 1;
+            projectile.current_frame = 0;
+            projectile.time_per_frame = 0.015f;
+            projectile.animation_frame_count = 2;
+            projectile.rotation = bullet_rotation;
+            projectile.damage = weapon.damage_per_bullet;
+            projectile.distance_limit = weapon.distance_limit;
+
+            game.projectiles.push(
+                projectile
+            );
         }
 
-        game.camera.shake(0.5f);
-        SpriteParticle projectile;
-        projectile.new_projectile(true);
-        projectile.position = player.position.add({{ delta_x + SPRITE_PIXEL_SIZE * 0.5f, -delta_y + SPRITE_PIXEL_SIZE * 0.5f }});
-        projectile.velocity = attack_direction.mulf(300);
-        projectile.sprite_cell_start_x = 0;
-        projectile.sprite_cell_start_y = 1;
-        projectile.current_frame = 0;
-        projectile.time_per_frame = 0.015f;
-        projectile.animation_frame_count = 2;
-        projectile.rotation = bullet_rotation;
-        game.projectiles.push(
-            projectile
-        );
-        game.player.weapon_cooldown_timer = 0.3f;
+       
+        game.player.weapon_cooldown_timer = weapon.fire_rate_seconds;
     }
 
     if (player.flip_x) {
@@ -449,9 +465,11 @@ fn void render_weapons(Entity *player, Matrix4 player_xform, engine::GfxImage* w
         
         // Center player xform to center of body
         xform = m4_translate(xform, @v3(SPRITE_PIXEL_SIZE * 0.5f, SPRITE_PIXEL_SIZE * 0.5f, 0));
-        engine::draw_circle_xform(xform, @v2(1, 1), {{ 1, 0, 0, 1f }});
+        // engine::draw_circle_xform(xform, @v2(1, 1), {{ 1, 0, 0, 1f }});
         float x_scale = 1.0;
         float y_scale = 1.0;
+
+        bool aiming_above_player = game::world_frame.world_mouse_pos.y > player.position.add(@v2(SPRITE_PIXEL_SIZE * 0.5f, SPRITE_PIXEL_SIZE * 0.5f)).y;
 
         if (player.flip_x)
         {
@@ -468,14 +486,14 @@ fn void render_weapons(Entity *player, Matrix4 player_xform, engine::GfxImage* w
 
         Vector2 center_pos = player.position.add(@v2(SPRITE_PIXEL_SIZE * 0.5f, SPRITE_PIXEL_SIZE * 0.5f));
 
-        if (player.flip_x) {
+        if (aiming_above_player) {
             engine::push_z_layer(0);
         }
       
         engine::DrawQuad *quad = engine::draw_image_xform(weapons_sprite, xform, @v2(WEAPON_SPRITE_SIZE, WEAPON_SPRITE_SIZE), engine::COLOR_WHITE);
-        engine::draw_circle_xform(xform, @v2(1, 1), {{ 1, 0, 0, 1f }});
+        // engine::draw_circle_xform(xform, @v2(1, 1), {{ 1, 0, 0, 1f }});
         quad.uv = utils::get_uv_coords(sprite_size, @v2(player.equipped_weapon_index, 0), WEAPON_SPRITE_SIZE);
-        if (player.flip_x) {
+        if (aiming_above_player) {
             engine::pop_z_layer();
         }
     }

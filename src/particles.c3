@@ -28,7 +28,7 @@ struct SpriteParticle {
     bool player_projectile;
     float distance_limit;
     float current_distance;
-    int damage;
+    float damage;
 }
 
 
@@ -113,7 +113,7 @@ fn void update_and_draw_projectiles(engine::GfxImage *sprite, game::Game *game, 
                 if (collisions::circles_overlap(proj.position, 6, center_position, 6)) {
                     enemy.knockback(proj.velocity.normalize());
                     proj.active = false;
-                    enemy.health-= game.player.strength;
+                    enemy.health-=  proj.damage;
                     spawn_projectile_particle(game, proj, 1);
                     break;
                 }
