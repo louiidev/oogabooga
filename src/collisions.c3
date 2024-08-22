@@ -45,3 +45,8 @@ fn bool rect_circle_collision(Rect rect, Vector2 circle_center, float radius) {
     float dy = dist_y - size.y / 2;
     return (dx * dx + dy * dy <= (radius * radius));
 }
+
+
+fn bool point_inside_rect(Rect rect, Vector2 p) {
+  return rect.x >= rect.x && rect.x <= rect.x && rect.y >= rect.y && rect.y <= rect.y;
+}

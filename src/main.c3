@@ -14,6 +14,10 @@ def Vector2 = engine::Vector2;
 def Vector3 = engine::Vector3;
 def Matrix4 = engine::Matrix4;
 def m4_scale = engine::m4_scale;
+def draw_rect = engine::draw_rect;
+def draw_rect_xform = engine::draw_rect_xform;
+def m4_translate = engine::m4_translate;
+
 
 const Vector2 ROOM_SIZE = {{ 464, 246 }} ;
 const Vector3 DOOR_ONE_POS = {{ 178, 258, 0 }};
@@ -27,6 +31,12 @@ const float SHAKE_POWER = 2f;
 const float DODGE_VELOCITY = 350;
 const float DODGE_TIME = 0.5f;
 const float PLAYER_KNOCKBACK_VELOCITY = 150;
+
+
+enum GameState {
+	MAIN_MENU,
+	GAME_PLAY,
+}
 
 
 enum RelicType {
@@ -79,6 +89,7 @@ struct Game {
 	bool doors_locked;
 	bool show_reward;
 	Pickup current_room_reward;
+	GameState current_state;
 }
 
 
@@ -224,8 +235,6 @@ bool draw_hitboxes = false;
 fn int main(String[] args)
 {
 
-	engine::oogabooga_init(5 * 1024 * 1024);
-	
 	CString source;
 	bool ok = engine::os_read_entire_file_s(@str("./shaders/shader.hlsl"), &source, engine::get_heap_allocator());
 	assert(ok, "Could not read ./shaders/shader.hlsl");
@@ -329,9 +338,6 @@ fn int main(String[] args)
         double delta_t = now - last_time;
 
 
-
-		
-
 		if (delta_t < min_frametime)
         {
             engine::os_high_precision_sleep((min_frametime - delta_t) * 1000.0);
@@ -351,16 +357,103 @@ fn int main(String[] args)
 
 		engine::reset_temporary_storage();
 		engine::draw_frame.cbuffer = &cbuffer;
+
+		if (game.current_state == MAIN_MENU) {
+			engine::draw_frame.projection = engine::m4_make_orthographic_projection(window.pixel_width * -0.5f, window.pixel_width * 0.5f, window.pixel_height * -0.5f, window.pixel_height * 0.5f, -1, 10);
+			engine::draw_frame.view = engine::m4_make_scale(@v3(1, 1, 1));
+			world_frame.world_mouse_pos = utils::screen_to_world();
+
+			Matrix4 xform = engine::m4_scalar(1.0f);
+			float width = 150.0f;
+			float height = 250.0f;
+
+			xform = m4_translate(xform, @v3(width * 0.5f, height * 0.5f, 0.0f));
+			engine::draw_rect_xform(xform, @v2(width, height), @v4(0.1f, 0.1f, 0.1f, 1.0f));
+
+			// Draw Text
+			CString start_text = @str("Start Game");
+			CString load_text = @str("Load Game");
+			CString options_text = @str("Options");
+			CString exit_text = @str("Exit");
+			int font_height = 24;
+			float text_padding = 5;
+			float all_text_height = (font_height + text_padding) * 4;
+			float top_bottom_padding = height * 0.5f - all_text_height;
+			xform = m4_translate(xform, @v3(top_bottom_padding, 0.0f, 0.0f));
+			assert(top_bottom_padding > 0, "Text calculation off");
+			{
+				xform = m4_translate(xform, @v3(0.0f, font_height + text_padding, 0.0f));
+				engine::Gfx_Text_Metrics metrics = engine::measure_text(game.font, start_text, font_height, @v2(1, 1));
+				Vector2 justified = @v2(metrics.visual_size.x * 0.5f, metrics.visual_size.y * 0.5f);
+				Matrix4 text_xform = m4_translate(xform, @v3(justified.x, justified.y, 0.0f));
+				engine::draw_text_xform(game.font, start_text, font_height, text_xform, @v2(1, 1), engine::COLOR_WHITE);
+
+				Vector2 position = xform.position();
+				Rect rect = {(int)position.x, (int)position.y, metrics.visual_size.x, metrics.visual_size.y };
+
+				if (collisions::point_inside_rect(rect, world)) {
+					game.current_state = GameState.GAME_PLAY;
+				}
+
+			}
+
+			{
+				xform = m4_translate(xform, @v3(0.0f, font_height + text_padding, 0.0f));
+				engine::Gfx_Text_Metrics metrics = engine::measure_text(game.font, load_text, font_height, @v2(1, 1));
+				Vector2 justified = @v2(metrics.visual_size.x * 0.5f, metrics.visual_size.y * 0.5f);
+				Matrix4 text_xform = m4_translate(xform, @v3(width * 0.5f, height * 0.5f, 0.0f));
+				engine::draw_text_xform(game.font, load_text, font_height, text_xform, @v2(1, 1), engine::COLOR_WHITE);
+			}
+
+			{
+				xform = m4_translate(xform, @v3(0.0f, font_height + text_padding, 0.0f));
+
+				engine::Gfx_Text_Metrics metrics = engine::measure_text(game.font, options_text, font_height, @v2(1, 1));
+				Vector2 justified = @v2(metrics.visual_size.x * 0.5f, metrics.visual_size.y * 0.5f);
+				Matrix4 text_xform = m4_translate(xform, @v3(width * 0.5f, height * 0.5f, 0.0f));
+				engine::draw_text_xform(game.font, options_text, font_height, text_xform, @v2(1, 1), engine::COLOR_WHITE);
+			}
+
+			{
+				xform = m4_translate(xform, @v3(0.0f, font_height + text_padding, 0.0f));
+
+				engine::Gfx_Text_Metrics metrics = engine::measure_text(game.font, exit_text, font_height, @v2(1, 1));
+				Vector2 justified = @v2(metrics.visual_size.x * 0.5f, metrics.visual_size.y * 0.5f);
+				Matrix4 text_xform = m4_translate(xform, @v3(width * 0.5f, height * 0.5f, 0.0f));
+				engine::draw_text_xform(game.font, exit_text, font_height, text_xform, @v2(1, 1), engine::COLOR_WHITE);
+
+				Vector2 position = xform.position();
+				Rect rect = {(int)position.x, (int)position.y, metrics.visual_size.x, metrics.visual_size.y };
+
+				if (collisions::point_inside_rect(rect, world)) {
+					return 0;
+				}
+			}
+
+
+
+			continue;
+		}
+
+
+
+
 		if (game.player.active) {
 			game.camera.update(game.player.position, delta_t);
 		}
+
+
+		
 		engine::draw_frame.enable_z_sorting = true;
 		engine::draw_frame.projection = engine::m4_make_orthographic_projection(-half_width, half_width, -half_height, half_height, -1, 10);
 		engine::draw_frame.view = engine::m4_make_scale(@v3(1, 1, 1));
 		engine::draw_frame.view = engine::m4_mul(engine::draw_frame.view, engine::m4_make_translation(@v3(game.camera.position.x, game.camera.position.y, 0)));
 
-
 		world_frame.world_mouse_pos = utils::screen_to_world();
+
+
+
+
 			
 		Vector2 player_input = @v2(0, 0);
 		if (is_key_down(InputKeyCode.KEY_ARROW_UP.value) || is_key_down((int)'W'))
@@ -527,14 +620,14 @@ fn int main(String[] args)
 		if (game.show_reward) {
 			Vector2 image_size = utils::get_image_size(sprites.rewards);
 			Matrix4 xform = engine::m4_scalar(1.0f);
-			xform = engine::m4_translate(xform, @v3(-SPRITE_PIXEL_SIZE, -SPRITE_PIXEL_SIZE * 0.5f, 0.0f));
-			xform = engine::m4_translate(xform, @v3(0.0f, SPRITE_PIXEL_SIZE * 5, 0.0f));
+			xform = m4_translate(xform, @v3(-SPRITE_PIXEL_SIZE, -SPRITE_PIXEL_SIZE * 0.5f, 0.0f));
+			xform = m4_translate(xform, @v3(0.0f, SPRITE_PIXEL_SIZE * 5, 0.0f));
 			{
 					engine::DrawQuad *quad = engine::draw_image_xform(sprites.rewards, xform, @v2(SPRITE_PIXEL_SIZE, SPRITE_PIXEL_SIZE), engine::COLOR_WHITE);
 					quad.uv = utils::get_uv_coords(image_size, @v2(0, 0), SPRITE_PIXEL_SIZE);
 			}
 		
-			xform = engine::m4_translate(xform, @v3(0.0f, SPRITE_PIXEL_SIZE * 0.25f, 0.0f));
+			xform = m4_translate(xform, @v3(0.0f, SPRITE_PIXEL_SIZE * 0.25f, 0.0f));
 
 			switch(game.current_room_reward.type) {
 				case WEAPON:
@@ -601,17 +694,17 @@ fn int main(String[] args)
 
 		Matrix4 walls_xform = engine::m4_scalar(1.0f);
 		Vector2 walls_size = utils::get_image_size(sprites.walls);
-		walls_xform = engine::m4_translate(walls_xform, @v3(-walls_size.x * 0.5f, -walls_size.y * 0.5f, 0.0f));
+		walls_xform = m4_translate(walls_xform, @v3(-walls_size.x * 0.5f, -walls_size.y * 0.5f, 0.0f));
 		engine::push_z_layer(-1);
 		engine::draw_image_xform(sprites.walls, walls_xform, walls_size, engine::COLOR_WHITE);
 		
 		Vector2 door_size = utils::get_image_size(sprites.door);
 		foreach(door : game.doors) {
-			Matrix4 door_xform = engine::m4_translate(engine::m4_scalar(1.0f), @v3((int)door.position.x, (int)door.position.y, 0));
+			Matrix4 door_xform = m4_translate(engine::m4_scalar(1.0f), @v3((int)door.position.x, (int)door.position.y, 0));
 			if (game.doors_locked) {
 				engine::draw_image_xform(sprites.door, door_xform, door_size, engine::COLOR_WHITE);
 			} else if (door.reward_item != NIL) {
-				door_xform = engine::m4_translate(door_xform, @v3(-2.5f, SPRITE_PIXEL_SIZE, 0));
+				door_xform = m4_translate(door_xform, @v3(-2.5f, SPRITE_PIXEL_SIZE, 0));
 				Vector2 image_size = utils::get_image_size(sprites.rewards);
 				engine::DrawQuad *quad = engine::draw_image_xform(sprites.rewards, door_xform, @v2(SPRITE_PIXEL_SIZE, SPRITE_PIXEL_SIZE), engine::COLOR_WHITE);
 				quad.uv = utils::get_uv_coords(image_size, @v2((int)door.reward_item, 0), SPRITE_PIXEL_SIZE);

@@ -109,11 +109,6 @@ fn engine::Matrix4 flip_sprite_x(engine::Matrix4 xform) {
 }
 
 
-fn bool point_inside_rect(Vector2 min, Vector2 max, Vector2 p) {
-  return p.x >= min.x && p.x <= max.x && p.y >= min.y && p.y <= max.y;
-}
-
-
 fn bool line_circle_collision(Vector2 p1, Vector2 p2, Vector2 circle_center, float radius) {
     // Vector from p1 to p2
     Vector2 d = {{ p2.x - p1.x, p2.y - p1.y }};
