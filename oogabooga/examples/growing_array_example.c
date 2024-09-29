@@ -5,10 +5,12 @@ typedef struct Circle {
 } Circle;
 
 int entry(int argc, char **argv) {
+
+	//window.enable_vsync = true;
 	
 	window.title = STR("Minimal Game Example");
-	window.scaled_width = 1280; // We need to set the scaled size if we want to handle system scaling (DPI)
-	window.scaled_height = 720; 
+	window.point_width = 1280; // We need to set the scaled size if we want to handle system scaling (DPI)
+	window.point_height = 720; 
 	window.x = 200;
 	window.y = 90;
 	window.clear_color = hex_to_rgba(0x6495EDff);
@@ -25,19 +27,18 @@ int entry(int argc, char **argv) {
     os_update(); // We set scaled window size, os_update updates the pixel window size values for us
     
     for (int i = 0; i < num_circles; i++) {
-        Circle c;
-        c.radius = get_random_float32_in_range(radius_min, radius_max);
-        c.pos.x = get_random_float32_in_range(-(f32)window.width/2.0+c.radius, (f32)window.width/2.0-c.radius);
-        c.pos.y = get_random_float32_in_range(-(f32)window.height/2.0+c.radius, (f32)window.height/2.0-c.radius);
-        growing_array_add((void**)&circles, &c);
-        assert(circles[i].radius == c.radius);
-        assert(circles[i].pos.x == c.pos.x);
-        assert(circles[i].pos.y == c.pos.y);
+    	float32 r = get_random_float32_in_range(radius_min, radius_max);
+    	Vector2 p = v2(
+    		get_random_float32_in_range(-(f32)window.width/2.0+r, (f32)window.width/2.0-r),
+    		get_random_float32_in_range(-(f32)window.height/2.0+r, (f32)window.height/2.0-r)
+    	);
+    	// &(Circle){p, r} will only compile in true C, not in a C++ compiler
+        growing_array_add((void**)&circles, &(Circle){p, r});
     }
 
-	float64 last_time = os_get_current_time_in_seconds();
+	float64 last_time = os_get_elapsed_seconds();
 	while (!window.should_close) {
-		float64 now = os_get_current_time_in_seconds();
+		float64 now = os_get_elapsed_seconds();
 		if ((int)now != (int)last_time) log("%.2f FPS\n%.2fms", 1.0/(now-last_time), (now-last_time)*1000);
 		last_time = now;
 		

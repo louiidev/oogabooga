@@ -84,10 +84,13 @@ strings_match(string a, string b) {
 
 string 
 string_view(string s, u64 start_index, u64 count) {
-	assert(start_index < s.count, "array_view start_index % out of range for string count %", start_index, s.count);
-	assert(count > 0, "array_view count must be more than 0");
-	assert(start_index + count <= s.count, "array_view start_index + count is out of range");
+	if (count == 0) return null_string;
 	
+	assert(start_index < s.count, "string_view start_index % out of range for string count %", start_index, s.count);
+	assert(count > 0, "string_view count must be more than 0");
+	assert(start_index + count <= s.count, "string_view start_index + count is out of range");
+	
+
 	string result;
 	result.data = s.data+start_index;
 	result.count = count;
@@ -173,6 +176,10 @@ string_builder_init(String_Builder *b, Allocator allocator) {
 	string_builder_init_reserve(b, 128, allocator);
 }
 void 
+string_builder_deinit(String_Builder *b) {
+	dealloc(b->allocator, b->buffer);
+}
+void 
 string_builder_append(String_Builder *b, string s) {
 	assert(b->allocator.proc, "String_Builder is missing allocator");
 	string_builder_reserve(b, b->count+s.count);
@@ -209,3 +216,24 @@ string_replace_all(string s, string old, string new, Allocator allocator) {
 	return string_builder_get_string(builder);
 }
 	
+string
+string_trim_left(string s) {
+	while (s.count > 0 && *s.data == ' ') {
+		s.data += 1;
+		s.count -= 1;
+	}
+	return s;
+}
+string
+string_trim_right(string s) {
+
+	while (s.count > 0 && s.data[s.count-1] == ' ') {
+		s.count -= 1;
+	}
+	return s;
+}
+string
+string_trim(string s) {
+	s = string_trim_left(s);
+	return string_trim_right(s);
+}

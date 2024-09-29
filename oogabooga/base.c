@@ -17,7 +17,7 @@ dump_stack_trace();
 
 #define ASSERT_STR_HELPER(x) #x
 #define ASSERT_STR(x) ASSERT_STR_HELPER(x)
-#define assert_line(line, cond, ...) {if(!(cond)) { printf("Assertion failed in file " __FILE__ " on line " ASSERT_STR(line) "\nFailed Condition: " #cond ". Message: " __VA_ARGS__); dump_stack_trace(); crash(); }}
+#define assert_line(line, cond, ...) {if(!(cond)) { printf("\nAssertion failed in file " __FILE__ " on line " ASSERT_STR(line) "\n\nFailed Condition: " #cond ". Message: " __VA_ARGS__); printf("\n"); dump_stack_trace(); crash(); }}
 #define assert(cond, ...) {assert_line(__LINE__, cond, __VA_ARGS__)}
 
 #define DEFER(start, end) for(int _i_ = ((start), 0); _i_ == 0; _i_ += 1, (end))
@@ -189,3 +189,6 @@ get_next_power_of_two(u64 x) {
 
     return x + 1;
 }
+
+#define align_next(x, a)     ((u64)((x)+(a)-1ULL) & (u64)~((a)-1ULL))
+#define align_previous(x, a) ((u64)(x) & (u64)~((a) - 1ULL))

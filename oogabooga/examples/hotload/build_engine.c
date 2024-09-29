@@ -49,15 +49,15 @@ int entry(int argc, char **argv) {
     load_game_dll(argv);
 	
 	window.title = STR("Minimal Game Example");
-	window.scaled_width = 1280; // We need to set the scaled size if we want to handle system scaling (DPI)
-	window.scaled_height = 720; 
+	window.point_width = 1280; // We need to set the scaled size if we want to handle system scaling (DPI)
+	window.point_height = 720; 
 	window.x = 200;
 	window.y = 90;
 	window.clear_color = hex_to_rgba(0x6495EDff);
 
-	float64 last_time = os_get_current_time_in_seconds();
+	float64 last_time = os_get_elapsed_seconds();
 	while (!window.should_close) {
-		float64 now = os_get_current_time_in_seconds();
+		float64 now = os_get_elapsed_seconds();
 		float64 delta = now-last_time;
 		if ((int)now != (int)last_time) log("%.2f FPS\n%.2fms", 1.0/(delta), (delta)*1000);
 		last_time = now;

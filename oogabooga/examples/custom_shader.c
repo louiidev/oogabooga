@@ -23,8 +23,8 @@ Draw_Quad *draw_outlined_circle_xform(Matrix4 xform, Vector2 size, Vector4 color
 int entry(int argc, char **argv) {
 	
 	window.title = STR("Custom Shader Example");
-	window.scaled_width = 1280;
-	window.scaled_height = 720; 
+	window.point_width = 1280;
+	window.point_height = 720; 
 	window.x = 200;
 	window.y = 90;
 	window.clear_color = hex_to_rgba(0x6495EDff);
@@ -33,9 +33,11 @@ int entry(int argc, char **argv) {
 	bool ok = os_read_entire_file("oogabooga/examples/custom_shader.hlsl", &source, get_heap_allocator());
 	assert(ok, "Could not read oogabooga/examples/custom_shader.hlsl");
 	
+	Gfx_Shader_Extension shader;
 	// This is slow and needs to recompile the shader. However, it should probably only happen once (or each hot reload)
 	// If it fails, it will return false and return to whatever shader it was before.
-	shader_recompile_with_extension(source, sizeof(My_Cbuffer));
+	ok = gfx_compile_shader_extension(source, sizeof(My_Cbuffer), &shader);
+	assert(ok, "Failed compiling shader extension");
 	
 	dealloc_string(get_heap_allocator(), source);
 	
@@ -44,16 +46,23 @@ int entry(int argc, char **argv) {
 	// memory from an invalid address.
 	My_Cbuffer cbuffer;
 
-	float64 last_time = os_get_current_time_in_seconds();
+	float64 last_time = os_get_elapsed_seconds();
 	while (!window.should_close) {
 		
-		float64 now = os_get_current_time_in_seconds();
+		float64 now = os_get_elapsed_seconds();
 		if ((int)now != (int)last_time) {
 			log("%.2f FPS\n%.2fms", 1.0/(now-last_time), (now-last_time)*1000);
 		}
 		last_time = now;
 	
 		reset_temporary_storage();
+		
+		float32 aspect = (float32)window.width/(float32)window.height;
+	
+		draw_frame.projection = m4_make_orthographic_projection(-aspect, aspect, -1, 1, -1, 10);
+		
+		// The shader is used when rendering, which happens in gfx_update() for everything drawn to the Draw_Frame.
+		draw_frame.shader_extension = shader;
 		
 		cbuffer.mouse_pos_screen = v2(input_frame.mouse_x, input_frame.mouse_y);
 		cbuffer.window_size = v2(window.width, window.height);
@@ -76,7 +85,10 @@ int entry(int argc, char **argv) {
 		if (is_key_just_pressed('R')) {
 			ok = os_read_entire_file("oogabooga/examples/custom_shader.hlsl", &source, get_heap_allocator());
 			assert(ok, "Could not read oogabooga/examples/custom_shader.hlsl");
-			shader_recompile_with_extension(source, sizeof(My_Cbuffer));
+			Gfx_Shader_Extension old_shader = shader; // Store previous shader in case this one fails to compile
+			ok = gfx_compile_shader_extension(source, sizeof(My_Cbuffer), &shader);
+			if (!ok)  shader = old_shader;
+			else gfx_destroy_shader_extension(old_shader);
 			dealloc_string(get_heap_allocator(), source);
 		}
 		
@@ -88,8 +100,8 @@ int entry(int argc, char **argv) {
 }
 
 Vector2 world_to_screen(Vector2 p) {
-    Vector4 in_view_space = m4_transform(draw_frame.view, v4(p.x, p.y, 0.0, 1.0));
-    Vector4 in_clip_space = m4_transform(draw_frame.projection, in_view_space);
+    Vector4 in_cam_space  = m4_transform(draw_frame.camera_xform, v4(p.x, p.y, 0.0, 1.0));
+    Vector4 in_clip_space = m4_transform(draw_frame.projection, in_cam_space);
     
     Vector4 ndc = {
         .x = in_clip_space.x / in_clip_space.w,
